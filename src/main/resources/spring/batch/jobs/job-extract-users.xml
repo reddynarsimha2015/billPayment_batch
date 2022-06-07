@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch" 
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch 
+		http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/util 
+		http://www.springframework.org/schema/util/spring-util-3.2.xsd
+		">
+        
+	<import resource="../config/context.xml" />
+	<import resource="../config/database.xml" />
+	<job id="paymentJob" xmlns="http://www.springframework.org/schema/batch">
+		<step id="step1">
+			<tasklet>
+				<chunk reader="itemReader"  processor="paymentProcessor" 
+				 writer="itemWriter" 
+					commit-interval="1" />
+			</tasklet>
+		</step>
+	</job>
+	
+	
+
+	
+	
+
+	<bean id="itemReader"
+		class="org.springframework.batch.item.database.JdbcCursorItemReader"
+		scope="step" >
+		<property name="dataSource" ref="dataSource" />
+		<property name="sql"
+			value="SELECT * FROM test.billpayment_details;" />
+		<property name="rowMapper">
+			<bean class="com.payments.batch.reader.PaymentsRowMapper" />
+		</property>
+	</bean>
+
+	<bean id="paymentProcessor" class="com.payments.batch.process.PaymentProcessor"/>
+	
+	
+	<!--  file writer -->
+<bean id="itemWriter" class="com.payments.batch.writer.PaymentWriter"/>
+
+	
+
+<!--  Integrate Spring Batch with Scheduler -->
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<bean id="cronTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean">
+				<property name="jobDetail" ref="jobDetail" />
+				<property name="cronExpression" value="0 */2 * ? * *" />
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="jobDetail" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass" value="com.payments.batch.writer.quartz.JobLauncherDetails" />
+		<property name="group" value="quartz-batch" />
+		<property name="jobDataAsMap">
+			<map>
+				<entry key="jobName" value="paymentJob" />
+				<entry key="jobLocator" value-ref="jobRegistry" />
+				<entry key="jobLauncher" value-ref="jobLauncher" />
+				<entry key="param1" value="sreenutech1" />
+				<entry key="param2" value="sreenutech2" />
+			</map>
+		</property>
+	</bean>
+	
+	
+</beans>
